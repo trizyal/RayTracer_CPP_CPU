@@ -72,6 +72,10 @@ class Raytracer
 
 	Homogeneous4 TraceAndShadeWithRay(Ray r, int bounces, float reflectionFactor);
 
+	Homogeneous4 reflectionShading(Ray ray, Cartesian3 normal, Cartesian3 point, Homogeneous4 color, float reflectivity, float reflectionFactor, int bounces);
+
+	Homogeneous4 interpolatedShading(Scene::CollisionInfo ci, Ray r);
+
 	Ray reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint);
 
     private:

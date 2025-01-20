@@ -58,6 +58,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		renderParameters.orthoProjection = !renderParameters.orthoProjection;
 		renderParameters.printSettings();
 	}
+	if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
+		renderParameters.refractionEnabled = !renderParameters.refractionEnabled;
+		renderParameters.printSettings();
+	}
 
 	// Movement
 	if (key == GLFW_KEY_W)
