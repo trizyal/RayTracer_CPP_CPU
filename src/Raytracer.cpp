@@ -85,12 +85,16 @@ void Raytracer::RaytraceThread()
         #pragma omp parallel for schedule(dynamic)
         for (int i = 0 ; i < frameBuffer.width ; i++)
         {
-
             Ray cameraRay = calculateRay(i, j, !renderParameters->orthoProjection);
             Homogeneous4 color = TraceAndShadeWithRay(cameraRay, N_BOUNCES, 1.0f);
             frameBuffer[j][i] = RGBAValue{linear_to_srgb(color.x), linear_to_srgb(color.y), linear_to_srgb(color.z), 255};
         }
 
+        if (restartRaytrace)
+        {
+            raytracingRunning = false;
+            return;
+        }
     }
     raytracingRunning = false;
 }
