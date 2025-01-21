@@ -76,6 +76,8 @@ class Raytracer
 
 	Homogeneous4 interpolatedShading(Scene::CollisionInfo ci, Ray r);
 
+	Homogeneous4 shadowShading(Scene::CollisionInfo ci, Light* l, Cartesian3 currentPoint, Cartesian3 normal, Cartesian3 bc, Homogeneous4 phongColor);
+
 	Ray reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint);
 
     private:

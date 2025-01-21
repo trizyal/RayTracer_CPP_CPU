@@ -158,6 +158,7 @@ void RenderParameters::printSettings()
     cout << "Fresnel " << fresnelRendering << endl;
     cout << "monteCarloEnabled " << monteCarloEnabled << endl;
     cout << "Ortho " << orthoProjection << endl;
+    cout << "====================================" << endl;
 }
 
 Matrix4 RenderParameters::getProjectionMatrix(float window_w, float window_h) 

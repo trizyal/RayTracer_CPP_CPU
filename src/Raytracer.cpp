@@ -147,33 +147,11 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
 
             if (renderParameters->shadowsEnabled)
             {
-                // for this light, are we in shadow?
-                float epsilon = 0.01f;
-                Cartesian3 lp = raytraceScene.getModelview() * l->GetPositionCenter().Point();
-                Ray shadowRay =  Ray((currentPoint+epsilon*normal), ( lp - currentPoint).unit(), Ray::secondary);
+                phongColor = shadowShading(ci, l, currentPoint, normal, bc, phongColor);
 
-                Scene::CollisionInfo ci_shadow = raytraceScene.closestTriangle(shadowRay);
-
-                if (ci_shadow.t > 0.0f && ci_shadow.tri.isValid() && !ci_shadow.tri.shared_material->isLight())
+                if (renderParameters->reflectionEnabled && (ci.tri.shared_material->reflectivity > 0.0f))
                 {
-                    // we are in shadow
-                    Homogeneous4 ambient = ci.tri.shadowShading(l->GetColor());
-                    phongColor = phongColor + ambient;
-                }
-                else
-                {
-                    // we are not in shadow
-                    Matrix4 modelview = raytraceScene.getModelview();
-                    Homogeneous4 lightPos = modelview * l->GetPositionCenter();
-                    Homogeneous4 lightColor = l->GetColor();
-                    phongColor = phongColor + ci.tri.phongShading(lightPos, lightColor, bc);
-                }
-                if (renderParameters->reflectionEnabled)
-                {
-                    if (ci.tri.shared_material->reflectivity > 0.0f)
-                    {
-                        phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
-                    }
+                    phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
                 }
             }
 
@@ -185,32 +163,23 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                 Homogeneous4 lightColor = l->GetColor();
                 phongColor = phongColor + ci.tri.phongShading(lightPos, lightColor, bc);
 
-                if (renderParameters->reflectionEnabled)
+                if (renderParameters->reflectionEnabled && (ci.tri.shared_material->reflectivity > 0.0f))
                 {
-                    if (ci.tri.shared_material->reflectivity > 0.0f)
-                    {
-                        phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
-
-                    }
+                    phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
                 }
             }
         }
-
-    // just sanity check the color
-    phongColor.x = std::clamp(phongColor.x, 0.0f, 1.0f);
-    phongColor.y = std::clamp(phongColor.y, 0.0f, 1.0f);
-    phongColor.z = std::clamp(phongColor.z, 0.0f, 1.0f);
-    return phongColor;
+        // just sanity check the color
+        phongColor.x = std::clamp(phongColor.x, 0.0f, 1.0f);
+        phongColor.y = std::clamp(phongColor.y, 0.0f, 1.0f);
+        phongColor.z = std::clamp(phongColor.z, 0.0f, 1.0f);
+        return phongColor;
     }
     else 
     {
         // no intersection
         return Homogeneous4(0.0f, 0.0f, 0.0f, 1.0f);
     }
-
-    
-
-    
 
 }
 
@@ -231,6 +200,35 @@ Homogeneous4 Raytracer::reflectionShading(Ray ray, Cartesian3 normal, Cartesian3
     return color;
 }
 
+
+
+
+Homogeneous4 Raytracer::shadowShading(Scene::CollisionInfo ci, Light* l, Cartesian3 currentPoint, Cartesian3 normal, Cartesian3 bc, Homogeneous4 phongColor)
+{
+    // for this light, are we in shadow?
+    float epsilon = 0.01f;
+    Cartesian3 lp = raytraceScene.getModelview() * l->GetPositionCenter().Point();
+    Ray shadowRay =  Ray((currentPoint+epsilon*normal), ( lp - currentPoint).unit(), Ray::secondary);
+
+    Scene::CollisionInfo ci_shadow = raytraceScene.closestTriangle(shadowRay);
+
+    if (ci_shadow.t > 0.0f && ci_shadow.tri.isValid() && !ci_shadow.tri.shared_material->isLight())
+    {
+        // we are in shadow
+        Homogeneous4 ambient = ci.tri.shadowShading(l->GetColor());
+        phongColor = phongColor + ambient;
+    }
+    else
+    {
+        // we are not in shadow
+        Matrix4 modelview = raytraceScene.getModelview();
+        Homogeneous4 lightPos = modelview * l->GetPositionCenter();
+        Homogeneous4 lightColor = l->GetColor();
+        phongColor = phongColor + ci.tri.phongShading(lightPos, lightColor, bc);
+    }
+    
+    return phongColor;
+}
 
 
 
