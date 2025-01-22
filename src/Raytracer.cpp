@@ -136,6 +136,9 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
 {
     Scene::CollisionInfo ci = raytraceScene.closestTriangle(r);
 
+    if (bounces <= 0)
+        return Homogeneous4(0.0f, 0.0f, 0.0f, 0.0f);
+
     if (ci.t > -0.01f)
     {
         // this the shared bit
@@ -151,15 +154,53 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
 
         Cartesian3 currentPoint = ci.tri.verts[0].Point() * bc.x + ci.tri.verts[1].Point() * bc.y + ci.tri.verts[2].Point() * bc.z;
 
-        for (Light* l : renderParameters->lights)
+         for (Light* l : renderParameters->lights)
         {
-            // Cartesian3 currentPoint = ci.tri.verts[0].Point() * bc.x + ci.tri.verts[1].Point() * bc.y + ci.tri.verts[2].Point() * bc.z;
+            Cartesian3 currentPoint = ci.tri.verts[0].Point() * bc.x + ci.tri.verts[1].Point() * bc.y + ci.tri.verts[2].Point() * bc.z;
 
             if (renderParameters->shadowsEnabled)
             {
-                // shadows are enabled and we need to check if we are in shadow
-                phongColor = shadowShading(ci, l, currentPoint, normal, bc, phongColor);
+                // for this light, are we in shadow?
+                float epsilon = 0.01f;
+                Cartesian3 lp = raytraceScene.getModelview() * l->GetPositionCenter().Point();
+                Ray shadowRay =  Ray((currentPoint+epsilon*normal), ( lp - currentPoint).unit(), Ray::secondary);
+
+                Scene::CollisionInfo ci_shadow = raytraceScene.closestTriangle(shadowRay);
+
+                if (ci_shadow.t > 0.0f && ci_shadow.tri.isValid() && !ci_shadow.tri.shared_material->isLight())
+                {
+                    // we are in shadow
+                    Homogeneous4 ambient = ci.tri.shadowShading(l->GetColor());
+                    phongColor = phongColor + ambient;
+                }
+                else
+                {
+                    // we are not in shadow
+                    Matrix4 modelview = raytraceScene.getModelview();
+                    Homogeneous4 lightPos = modelview * l->GetPositionCenter();
+                    Homogeneous4 lightColor = l->GetColor();
+                    phongColor = phongColor + ci.tri.phongShading(lightPos, lightColor, bc);
+                }
+                if (renderParameters->reflectionEnabled)
+                {
+                    if (ci.tri.shared_material->reflectivity > 0.0f)
+                    {
+                        if (bounces > 0)
+                        {
+                            // reflection
+                            Ray reflectedRay = reflectRay(r, normal, currentPoint);
+                            Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity);
+                            phongColor = (phongColor*(1-ci.tri.shared_material->reflectivity) + reflectedColor) * reflectionFactor;
+                        }
+                        else if (bounces == 0)
+                        {
+                            // no more bounces
+                            phongColor = Homogeneous4(0.0f, 0.0f, 0.0f, 1.0f);
+                        }
+                    }
+                }
             }
+
             else
             {
                 // shadows are disabled
@@ -167,22 +208,25 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                 Homogeneous4 lightPos = modelview * l->GetPositionCenter();
                 Homogeneous4 lightColor = l->GetColor();
                 phongColor = phongColor + ci.tri.phongShading(lightPos, lightColor, bc);
-            }
 
-            // if (renderParameters->reflectionEnabled)
-            // {
-            //     // reflection is enabled, this is the recursive part
-            //     phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
-            // }
-
-            if (renderParameters->refractionEnabled)
-            {
-                // refraction is enabled, this is the recursive part
-                phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
-
-                Ray refractedRay = refractRay(r, normal, currentPoint, ci.tri.shared_material->indexOfRefraction);
-                Homogeneous4 refractedColor = TraceAndShadeWithRay(refractedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ci.tri.shared_material->indexOfRefraction);
-                phongColor = phongColor + refractedColor;
+                if (renderParameters->reflectionEnabled)
+                {
+                    if (ci.tri.shared_material->reflectivity > 0.0f)
+                    {
+                        if (bounces > 0)
+                        {
+                            // reflection
+                            Ray reflectedRay = reflectRay(r, normal, currentPoint);
+                            Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity);
+                            phongColor = (phongColor*(1-ci.tri.shared_material->reflectivity) + reflectedColor) * reflectionFactor;
+                        }
+                        else if (bounces == 0)
+                        {
+                            // no more bounces
+                            phongColor = Homogeneous4(0.0f, 0.0f, 0.0f, 1.0f);
+                        }
+                    }
+                }
             }
         }
         // just sanity check the color
