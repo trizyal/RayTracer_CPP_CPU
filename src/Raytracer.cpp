@@ -76,6 +76,9 @@ std::uint8_t linear_to_srgb(float aValue) noexcept
     return std::uint8_t(255.f * (1.055f * std::pow(aValue, 1.f / 2.4f) - 0.055f) + 0.5f);
 }
 
+
+
+
 void Raytracer::RaytraceThread()
 {    
     for (int j = 0 ; j < frameBuffer.height ; j++)
@@ -93,15 +96,19 @@ void Raytracer::RaytraceThread()
             {
                 if (renderParameters->interpolationRendering)
                 {
+                    // just normals shading
                     color =  interpolatedShading(ci, cameraRay);
                 }
                 else if (renderParameters->phongEnabled)
                 {
+                    // raytracing proper
                     color = TraceAndShadeWithRay(cameraRay, N_BOUNCES, 1.0f);
                 }
                 else
+                {  
+                    // no shading, just white if ray hit something
                     color = Homogeneous4(1.0f, 1.0f, 1.0f, 1.0f);
-                    // color = TraceAndShadeWithRay(cameraRay, N_BOUNCES, 1.0f);
+                }
             }
             else 
             {
@@ -109,6 +116,7 @@ void Raytracer::RaytraceThread()
                 color = Homogeneous4(0.0f, 0.0f, 0.0f, 1.0f);
             }
             
+            // set the color
             frameBuffer[j][i] = RGBAValue{linear_to_srgb(color.x), linear_to_srgb(color.y), linear_to_srgb(color.z), 255};
         }
 
@@ -124,7 +132,7 @@ void Raytracer::RaytraceThread()
 
 
 
-Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectionFactor)
+Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectionFactor, float currentIOR)
 {
     Scene::CollisionInfo ci = raytraceScene.closestTriangle(r);
 
@@ -141,20 +149,17 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
         Cartesian3 Nc = ci.tri.normals[2].Vector();
         Cartesian3 normal = (Na * bc.x + Nb * bc.y + Nc * bc.z).unit();
 
+        Cartesian3 currentPoint = ci.tri.verts[0].Point() * bc.x + ci.tri.verts[1].Point() * bc.y + ci.tri.verts[2].Point() * bc.z;
+
         for (Light* l : renderParameters->lights)
         {
-            Cartesian3 currentPoint = ci.tri.verts[0].Point() * bc.x + ci.tri.verts[1].Point() * bc.y + ci.tri.verts[2].Point() * bc.z;
+            // Cartesian3 currentPoint = ci.tri.verts[0].Point() * bc.x + ci.tri.verts[1].Point() * bc.y + ci.tri.verts[2].Point() * bc.z;
 
             if (renderParameters->shadowsEnabled)
             {
+                // shadows are enabled and we need to check if we are in shadow
                 phongColor = shadowShading(ci, l, currentPoint, normal, bc, phongColor);
-
-                if (renderParameters->reflectionEnabled && (ci.tri.shared_material->reflectivity > 0.0f))
-                {
-                    phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
-                }
             }
-
             else
             {
                 // shadows are disabled
@@ -162,11 +167,22 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                 Homogeneous4 lightPos = modelview * l->GetPositionCenter();
                 Homogeneous4 lightColor = l->GetColor();
                 phongColor = phongColor + ci.tri.phongShading(lightPos, lightColor, bc);
+            }
 
-                if (renderParameters->reflectionEnabled && (ci.tri.shared_material->reflectivity > 0.0f))
-                {
-                    phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
-                }
+            // if (renderParameters->reflectionEnabled)
+            // {
+            //     // reflection is enabled, this is the recursive part
+            //     phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
+            // }
+
+            if (renderParameters->refractionEnabled)
+            {
+                // refraction is enabled, this is the recursive part
+                phongColor = reflectionShading(r, normal, currentPoint, phongColor, ci.tri.shared_material->reflectivity, reflectionFactor, bounces);
+
+                Ray refractedRay = refractRay(r, normal, currentPoint, ci.tri.shared_material->indexOfRefraction);
+                Homogeneous4 refractedColor = TraceAndShadeWithRay(refractedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ci.tri.shared_material->indexOfRefraction);
+                phongColor = phongColor + refractedColor;
             }
         }
         // just sanity check the color
@@ -188,6 +204,9 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
 
 Homogeneous4 Raytracer::reflectionShading(Ray ray, Cartesian3 normal, Cartesian3 point, Homogeneous4 color, float reflectivity, float reflectionFactor, int bounces)
 {
+    if (reflectivity <= 0.0f)
+        return color;
+
     if (bounces > 0)
     {
         Ray reflectedRay = reflectRay(ray, normal, point);
@@ -237,6 +256,16 @@ Ray Raytracer::reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint
 {
     Cartesian3 reflection = r.direction - (normal * 2.0f * r.direction.dot(normal));
     return Ray(intersectionPoint+normal*0.001f, reflection, Ray::secondary);
+}
+
+Ray Raytracer::refractRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint, float ior)
+{
+    auto I = r.direction;
+    auto costheta = normal.dot(I);
+
+    auto T = I * 1/ior + (1/ior * costheta - sqrt(1 - 1/ior * 1/ior * (1 - costheta * costheta))) * normal;
+
+    return Ray(intersectionPoint - normal * 0.001f, T, Ray::secondary);
 }
 
 

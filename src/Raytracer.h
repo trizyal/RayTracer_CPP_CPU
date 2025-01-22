@@ -70,7 +70,7 @@ class Raytracer
 
 	Ray calculateRay(int pixelx, int pixely, bool perspective);
 
-	Homogeneous4 TraceAndShadeWithRay(Ray r, int bounces, float reflectionFactor);
+	Homogeneous4 TraceAndShadeWithRay(Ray r, int bounces, float reflectionFactor, float currentIOR = 1.0f);
 
 	Homogeneous4 reflectionShading(Ray ray, Cartesian3 normal, Cartesian3 point, Homogeneous4 color, float reflectivity, float reflectionFactor, int bounces);
 
@@ -79,6 +79,8 @@ class Raytracer
 	Homogeneous4 shadowShading(Scene::CollisionInfo ci, Light* l, Cartesian3 currentPoint, Cartesian3 normal, Cartesian3 bc, Homogeneous4 phongColor);
 
 	Ray reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint);
+
+	Ray refractRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint, float refractiveIndex);
 
     private:
 
