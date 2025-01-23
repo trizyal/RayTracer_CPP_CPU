@@ -80,9 +80,12 @@ class Raytracer
 
 	Ray reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint);
 
+	// routine to refract a ray
+	// returns true if the ray is refracted, false if there is total internal reflection
+	// hence the direction is taken as a reference
+	// normal is taken as a reference too because it is used to offset the origin of this new ray 
+	// and the normal changes the calculation if we are refracting from air to a material or vice versa
 	bool refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float &ior, Cartesian3 &direction);
-	bool refractRay1(Ray incidentRay, Cartesian3 intersectionPoint, Cartesian3 normal, float ior, Cartesian3 &direction);
-	bool refractRay2(const Cartesian3& incident, const Cartesian3& normal, float ior, Cartesian3& refractedDirection);
 
     private:
 
