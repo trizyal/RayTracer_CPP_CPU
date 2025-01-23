@@ -80,7 +80,9 @@ class Raytracer
 
 	Ray reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint);
 
-	Ray refractRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint, float refractiveIndex);
+	bool refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float &ior, Cartesian3 &direction);
+	bool refractRay1(Ray incidentRay, Cartesian3 intersectionPoint, Cartesian3 normal, float ior, Cartesian3 &direction);
+	bool refractRay2(const Cartesian3& incident, const Cartesian3& normal, float ior, Cartesian3& refractedDirection);
 
     private:
 
