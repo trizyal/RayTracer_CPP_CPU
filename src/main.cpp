@@ -62,6 +62,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		renderParameters.refractionEnabled = !renderParameters.refractionEnabled;
 		renderParameters.printSettings();
 	}
+	if (key == GLFW_KEY_6 && action == GLFW_PRESS) {
+		renderParameters.fresnelRendering = !renderParameters.fresnelRendering;
+		renderParameters.printSettings();
+	}
 
 	// Movement
 	if (key == GLFW_KEY_W)
