@@ -87,6 +87,12 @@ class Raytracer
 	// and the normal changes the calculation if we are refracting from air to a material or vice versa
 	bool refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float &ior, Cartesian3 &direction);
 
+	float schlickApproximation( float cosTheta, float ior1, float ior2)
+	{
+		float R0 = pow((ior1 - ior2) / (ior1 + ior2), 2.0f);
+		return R0 + (1.0f - R0) * pow(1.0f - cosTheta, 5.0f);
+	}
+
     private:
 
 	std::atomic<bool> raytracingRunning;

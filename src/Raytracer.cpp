@@ -91,7 +91,9 @@ void Raytracer::RaytraceThread()
 {    
     for (int j = 0 ; j < frameBuffer.height ; j++)
     {
-        #pragma omp parallel for schedule(dynamic)
+        #ifdef NDEBUG
+       #pragma omp parallel for schedule(dynamic)
+        #endif
         for (int i = 0 ; i < frameBuffer.width ; i++)
         {
             Ray cameraRay = calculateRay(i, j, !renderParameters->orthoProjection);
@@ -149,6 +151,10 @@ void Raytracer::RaytraceThread()
 
 Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectionFactor, float currentIOR)
 {
+    // if (bounces <= 0)
+    // {
+    //     return COLOR_magenta;
+    // }
     Scene::CollisionInfo ci = raytraceScene.closestTriangle(r);
 
     if (ci.t > -0.01f)
@@ -201,7 +207,8 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                         if (bounces > 0)
                         {
                             // reflection
-                            Ray reflectedRay = reflectRay(r, normal, currentPoint);
+                            Ray reflectedRay = reflectRay(r, normal, currentPoint + normal * 0.001f);
+
                             Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity);
                             phongColor = (phongColor*(1-ci.tri.shared_material->reflectivity) + reflectedColor) * reflectionFactor;
                         }
@@ -214,7 +221,7 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                 }
             }
 
-            else
+            else // shadows are disabled
             {
                 // shadows are disabled
                 Matrix4 modelview = raytraceScene.getModelview();
@@ -246,29 +253,53 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
 
                 if (renderParameters->refractionEnabled)
                 {
-                    if (bounces <= 0)
-                    {
-                        phongColor = COLOR_black;
-                    }
 
                     if (ci.tri.shared_material->transparency > 0.0f)
                     {
+                        if (bounces > 0)
+                        {
+                            
                         float ior = ci.tri.shared_material->indexOfRefraction;
                         Cartesian3 direction;
-                        if (refractRay(r, currentPoint, normal, ior, direction)) // refraction
+                        bool isRefracted = refractRay(r, currentPoint, normal, ior, direction);
+
+                        float cosTheta = fabs(r.direction.dot(normal));
+                        float fresnel = schlickApproximation(cosTheta, currentIOR, ior);
+
+                        Homogeneous4 reflectionColor = COLOR_black;
+
+                        if (ci.tri.shared_material->reflectivity > 0.0f)
                         {
+                            Ray reflectedRay = reflectRay(r, normal, currentPoint + normal * 0.001f);
+                            reflectionColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
+                        }
+
+                        if (isRefracted) // refraction
+                        {
+                            // phongColor = COLOR_magenta;
                             Ray refractedRay = Ray(currentPoint, direction, Ray::secondary);
-                            // what does this ray hit?
-                            Homogeneous4 refractedColor = TraceAndShadeWithRay(refractedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
-                            phongColor = phongColor*(1-ci.tri.shared_material->transparency) + refractedColor;
+                            // // what does this ray hit?
+                            Homogeneous4 refractionColor = TraceAndShadeWithRay(refractedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
+                            // // phongColor = phongColor*(1-ci.tri.shared_material->transparency) + refractionColor;
+                            phongColor = phongColor + fresnel * reflectionColor + (1.0f - fresnel) * refractionColor;
                         }
-                        else // total internal reflection
+                       else // total internal reflection
+                       {
+                            Ray reflectedRay = reflectRay(r, normal, currentPoint);
+                            Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
+                            phongColor = phongColor + reflectionColor;
+                            // phongColor = phongColor + fresnel * reflectionColor;
+                            // phongColor = phongColor + fresnel * reflectionColor + (1.0f - fresnel) * reflectedColor;
+                        }
+                        }
+                        else if (bounces == 0)
                         {
-                            Ray reflectedRay = reflectRay(r, normal, currentPoint - normal * 0.001f);
-                            Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity);
-                            phongColor = (phongColor*(1-ci.tri.shared_material->reflectivity) + reflectedColor) * reflectionFactor;
+                            // no more bounces
+                            return phongColor;
                         }
+
                     }
+
                     else if (!renderParameters->reflectionEnabled)
                     {
                         // this is the color should be shown on the screen
@@ -292,11 +323,18 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
     else 
     {
         // no intersection
+        // return COLOR_black;
         return COLOR_black;
-        // return COLOR_gold;
     }
 
 }
+
+
+// float schlickApproximation( float cosTheta, float ior1, float ior2)
+// {
+//     float R0 = pow((ior1 - ior2) / (ior1 + ior2), 2.0f);
+//     return R0 + (1.0f - R0) * pow(1.0f - cosTheta, 5.0f);
+// }
 
 
 
