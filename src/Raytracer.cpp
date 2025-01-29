@@ -82,9 +82,7 @@ void Raytracer::RaytraceThread()
 {
     for (int j = 0; j < frameBuffer.height; j++)
     {
-#ifdef NDEBUG
-#pragma omp parallel for schedule(dynamic)
-#endif
+        #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < frameBuffer.width; i++)
         {
             Ray cameraRay = calculateRay(i, j, !renderParameters->orthoProjection);
