@@ -93,6 +93,7 @@ class Raytracer
 		return R0 + (1.0f - R0) * pow(1.0f - cosTheta, 5.0f);
 	}
 
+
     private:
 
 	std::atomic<bool> raytracingRunning;

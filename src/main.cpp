@@ -66,6 +66,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		renderParameters.fresnelRendering = !renderParameters.fresnelRendering;
 		renderParameters.printSettings();
 	}
+	if (key == GLFW_KEY_7 && action == GLFW_PRESS) {
+		renderParameters.monteCarloEnabled = !renderParameters.monteCarloEnabled;
+		renderParameters.printSettings();
+	}
 
 	// Movement
 	if (key == GLFW_KEY_W)
