@@ -85,7 +85,7 @@ class Raytracer
 	// hence the direction is taken as a reference
 	// normal is taken as a reference too because it is used to offset the origin of this new ray 
 	// and the normal changes the calculation if we are refracting from air to a material or vice versa
-	bool refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float &ior, Cartesian3 &direction);
+	bool refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float &currentIOR, float &ior, Cartesian3 &direction);
 
 	float schlickApproximation( float cosTheta, float ior1, float ior2)
 	{

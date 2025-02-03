@@ -228,7 +228,7 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                     if (bounces > 0)
                     {
                         Cartesian3 direction;
-                        bool isRefracted = refractRay(r, currentPoint, normal, ior, direction);
+                        bool isRefracted = refractRay(r, currentPoint, normal, currentIOR, ior, direction);
 
                         float cosTheta = fabs(r.direction.dot(normal));
                         float fresnelReflectance = schlickApproximation(cosTheta, currentIOR, ior);
@@ -249,11 +249,11 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                         if (isRefracted) // refraction
                         {
                             if (bounces == 0)
-                                return COLOR_black;
+                                return phongColor;
                             // phongColor = COLOR_magenta;
                             Ray refractedRay = Ray(currentPoint, direction, Ray::secondary);
                             // what does this ray hit?
-                            Homogeneous4 refractionColor = TraceAndShadeWithRay(refractedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
+                            Homogeneous4 refractionColor = TraceAndShadeWithRay(refractedRay, bounces - 1, ci.tri.shared_material->reflectivity, ior);
 
                             // Cartesian3 diffuse = ci.tri.shared_material->diffuse;
                             // std::cout << ci.tri.shared_material->name << std::endl;
@@ -279,6 +279,7 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                             refractionColor = absorptionColor.modulate(refractionColor);
 
                             phongColor = fresnelReflectance * reflectionColor + (1.0f - fresnelReflectance) * refractionColor;
+                            // phongColor = refractionColor;
                             // phongColor = fresnelReflectance * reflectionColor + (1.0f - fresnelReflectance) * refractionColor;
                         }
 
@@ -287,6 +288,7 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                             // Ray reflectedRay = reflectRay(r, normal, currentPoint);
                             // Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
                             // phongColor = phongColor + reflectedColor;
+                            phongColor = COLOR_gold;
                         }
                     }
                     else if (bounces == 0)
@@ -373,14 +375,17 @@ Ray Raytracer::reflectRay(Ray r, Cartesian3 normal, Cartesian3 intersectionPoint
     return Ray(intersectionPoint, reflection, Ray::secondary);
 }
 
-bool Raytracer::refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float &ior, Cartesian3 &direction)
+bool Raytracer::refractRay(Ray &incidentRay, Cartesian3 &intersectionPoint, Cartesian3 &normal, float& currentIOR, float &nextIOR, Cartesian3 &direction)
 {
     Cartesian3 I = incidentRay.direction.unit();
     Cartesian3 N = normal.unit();
     float IdotN = I.dot(N);
     float cosi = std::clamp(IdotN, -1.0f, 1.0f);
-    float etai = 1.0f, etat = ior;
+    // float etai = 1.0f, etat = ior;
+    float etai = currentIOR;
+    float etat = nextIOR;
     Cartesian3 n = N;
+    
     if (cosi < 0)
     {
         cosi = -cosi;
