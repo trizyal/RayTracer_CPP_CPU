@@ -35,10 +35,12 @@ void RenderParameters::findLights(std::vector<ThreeDModel> objects)
                         Cartesian3 v3 = obj.vertices[id3];
                         Cartesian3 vecA = v2 - v1;
                         Cartesian3 vecB = v3 - v1;
+                        Homogeneous4 t1(vecA.x, vecA.y, vecA.z, 0.0f);
+                        Homogeneous4 t2(vecB.x, vecB.y, vecB.z, 0.0f);
                         Homogeneous4 color = obj.material->emissive;
                         Homogeneous4 pos = v1 + (vecA/2) + (vecB/2);
                         Homogeneous4 normal = obj.normals[obj.faceNormals[0][0]];
-                        Light *l = new Light(Light::Area,color,pos,normal,vecA,vecB);
+                        Light *l = new Light(Light::Area,color,pos,normal,t1,t2);
                         l->enabled = true;
                         lights.push_back(l);
                     }
