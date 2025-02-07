@@ -2,5 +2,5 @@
 
 make config=release_x64 -j6
 
-# ./bin/main-release-x64-gcc.exe objects/cornell_box.obj objects/cornell_box.mtl
-./bin/main-release-x64-gcc.exe objects/cornell_box2.obj objects/cornell_box2.mtl
+./bin/main-release-x64-gcc.exe objects/cornell_box.obj objects/cornell_box.mtl
+# ./bin/main-release-x64-gcc.exe objects/cornell_box2.obj objects/cornell_box2.mtl

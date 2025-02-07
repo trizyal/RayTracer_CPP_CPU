@@ -287,8 +287,8 @@ Homogeneous4 Raytracer::TraceAndShadeWithRay(Ray r, int bounces, float reflectio
                         {
                             // Ray reflectedRay = reflectRay(r, normal, currentPoint);
                             // Homogeneous4 reflectedColor = TraceAndShadeWithRay(reflectedRay, bounces - 1, reflectionFactor * ci.tri.shared_material->reflectivity, ior);
-                            // phongColor = phongColor + reflectedColor;
-                            phongColor = COLOR_gold;
+                            phongColor = phongColor + reflectionColor;
+                            // phongColor = COLOR_gold;
                         }
                     }
                     else if (bounces == 0)
